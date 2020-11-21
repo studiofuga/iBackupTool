@@ -6,7 +6,7 @@ class IBackup:
     _DBFILE = "Manifest.db"
 
     def __init__(self, path):
-        self.path = path
+        self.path = os.path.abspath(path)
 
     def check_lock(self):
         """
@@ -23,16 +23,16 @@ class IBackup:
         self.db = sqlite3.connect(url, uri=True)
 
     def get_all_directories(self):
-        sql = "SELECT relativePath FROM Files WHERE flags=2 AND relativePath != ''"
-        cursor = self.db.execute(sql)
-        all = cursor.fetchall()
-        return (a[0] for a in all)
-
-    def get_all_files(self):
-        sql = "SELECT relativePath,fileID FROM Files WHERE flags=1 AND relativePath != ''"
+        sql = "SELECT relativePath, domain FROM Files WHERE flags=2 AND relativePath != ''"
         cursor = self.db.execute(sql)
         all = cursor.fetchall()
         return ((a[0], a[1]) for a in all)
+
+    def get_all_files(self):
+        sql = "SELECT relativePath,domain, fileID FROM Files WHERE flags=1 AND relativePath != ''"
+        cursor = self.db.execute(sql)
+        all = cursor.fetchall()
+        return ((a[0], a[1], a[2]) for a in all)
 
     def get_full_filename_for_fileId(self, fileId):
         sub = fileId[:2]

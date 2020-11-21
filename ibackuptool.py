@@ -3,31 +3,61 @@ from ibackuptool import ibackup
 from argparse import ArgumentParser
 import os
 from pathlib import Path
+from ibackuptool import ibackupstats
 
 
 class IBackupToolApp:
     def __init__(self):
+        self.stats = ibackupstats.IBackupStats()
         pass
 
     def reconstruct(self, bck :ibackup, outdir:str):
         self._mkoutputdir(outdir)
         bck.open()
-        self._extract_directories(bck, outdir)
 
+        self._extract_directories(bck, outdir, self.stats)
+        self._extract_files(bck, outdir, self.stats)
+
+        print("Dirs: {0}".format(self.stats.dirs))
+        print("Files: {0}".format(self.stats.files))
+
+    def _extract_files(self, bck :ibackup, outdir:str, stats : ibackupstats=None):
+        numfiles = 0
         files = bck.get_all_files()
         for fileInfo in files:
-            print("Extracting {0} -> {1} / {2}".format(fileInfo[0], fileInfo[1], bck.get_full_filename_for_fileId(fileInfo[1])))
-            os.symlink(src=bck.get_full_filename_for_fileId(fileInfo[1]),
-                       dst=os.path.join(outdir, fileInfo[0]))
+            domain = fileInfo[1]
+            path = fileInfo[0]
+            target = fileInfo[2]
 
-    def _extract_directories(self, bck, outdir):
+            if not os.path.exists(os.path.join(outdir, domain)):
+                Path(os.path.join(outdir, domain)).mkdir()
+
+            print("Extracting [{0}] {1} -> {2} -> {3}".format(
+                domain, path, target, bck.get_full_filename_for_fileId(target)))
+            os.symlink(src=bck.get_full_filename_for_fileId(target),
+                       dst=os.path.join(outdir, domain, path))
+            numfiles = numfiles+1
+
+        if stats is not None:
+            stats.files =numfiles
+        return numfiles
+
+    def _extract_directories(self, bck : ibackup, outdir:str, stats:ibackupstats = None):
+        numdirs = 0
         dirs = bck.get_all_directories()
         for dir in dirs:
-            print("Extracting Dir: {}".format(dir))
+            domain = dir[1]
+            path=dir[0]
+            print("Extracting Dir: [{1}] {0}".format(domain, path))
             try:
-                Path(os.path.join(outdir, dir)).mkdir(parents=True)
+                Path(os.path.join(outdir, domain, path)).mkdir(parents=True)
             except FileExistsError:
                 pass
+            numdirs = numdirs+1
+
+        if stats is not None:
+            stats.dirs =numdirs
+        return numdirs
 
     def _mkoutputdir(self, outdir):
         try:
