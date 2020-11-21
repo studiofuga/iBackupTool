@@ -10,12 +10,17 @@ class IBackupToolApp:
         pass
 
     def reconstruct(self, bck :ibackup, outdir:str):
-        try:
-            Path(outdir).mkdir(parents=True)
-        except FileExistsError:
-            # If already exists, skip it
-            pass
+        self._mkoutputdir(outdir)
         bck.open()
+        self._extract_directories(bck, outdir)
+
+        files = bck.get_all_files()
+        for fileInfo in files:
+            print("Extracting {0} -> {1} / {2}".format(fileInfo[0], fileInfo[1], bck.get_full_filename_for_fileId(fileInfo[1])))
+            os.symlink(src=bck.get_full_filename_for_fileId(fileInfo[1]),
+                       dst=os.path.join(outdir, fileInfo[0]))
+
+    def _extract_directories(self, bck, outdir):
         dirs = bck.get_all_directories()
         for dir in dirs:
             print("Extracting Dir: {}".format(dir))
@@ -23,6 +28,13 @@ class IBackupToolApp:
                 Path(os.path.join(outdir, dir)).mkdir(parents=True)
             except FileExistsError:
                 pass
+
+    def _mkoutputdir(self, outdir):
+        try:
+            Path(outdir).mkdir(parents=True)
+        except FileExistsError:
+            # If already exists, skip it
+            pass
 
 
 if __name__ == "__main__":

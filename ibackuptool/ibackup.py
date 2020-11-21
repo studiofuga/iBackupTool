@@ -28,6 +28,15 @@ class IBackup:
         all = cursor.fetchall()
         return (a[0] for a in all)
 
+    def get_all_files(self):
+        sql = "SELECT relativePath,fileID FROM Files WHERE flags=1 AND relativePath != ''"
+        cursor = self.db.execute(sql)
+        all = cursor.fetchall()
+        return ((a[0], a[1]) for a in all)
+
+    def get_full_filename_for_fileId(self, fileId):
+        sub = fileId[:2]
+        return os.path.join(self.path, sub, fileId)
 
     def _manifest_file(self):
         return os.path.join(self.path, self._DBFILE)
